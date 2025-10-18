@@ -22,15 +22,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: pnpm
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
-
-      - name: Verify pnpm
+      # Install pnpm **global** (pasti ada di PATH)
+      - name: Install pnpm globally (fallback)
         run: |
+          npm i -g pnpm@9
           pnpm -v
           node -v
 
