@@ -2,47 +2,74 @@ name: Build and Push Docker image
 
 on:
   push:
-    branches:
-      - main
-    tags:
-      - "v*"
+    branches: [ "main" ]
   workflow_dispatch:
 
 jobs:
   docker:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
+
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
+
+      # ---------- Preflight build (outside docker) ----------
+      - name: Setup Node + pnpm
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+      - name: Enable pnpm via corepack
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.0.0 --activate
+          pnpm -v
+          node -v
+      - name: Install deps (no frozen lockfile)
+        run: pnpm install --no-frozen-lockfile
+      - name: Preflight build (logs only, toleran)
+        id: preflight
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+          TSC_COMPILE_ON_ERROR: "1"
+          INTERFAZE_API_BASE: "https://api.interfaze.ai/v1"
+          INTERFAZE_API_KEY: "DUMMY_AT_BUILD"
+          WEB_FETCH_ENABLED: "true"
+        run: |
+          set -o pipefail
+          pnpm run build:ci 2>&1 | tee .next-build-log.txt
+        continue-on-error: true
+      - name: Upload preflight build log (if failed)
+        if: steps.preflight.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: preflight-build-log
+          path: .next-build-log.txt
+      # ---------- End preflight ----------
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/agent-challenge
+          tags: |
+            type=raw,value=latest
+            type=sha
       - name: Build and push
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v5
         with:
           context: .
           push: true
-          tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/agent-challenge:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/agent-challenge:${{ github.sha }}
+          platforms: linux/amd64
+          tags: ${{ steps.meta.outputs.tags }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-      - name: Output image tags
-        run: |
-          echo "::notice::Published tags"
-          echo "- ${{ secrets.DOCKERHUB_USERNAME }}/agent-challenge:latest"
-          echo "- ${{ secrets.DOCKERHUB_USERNAME }}/agent-challenge:${{ github.sha }}"
