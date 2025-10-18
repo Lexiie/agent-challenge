@@ -49,8 +49,9 @@ async function uploadToInterfaze(file: { buffer: Buffer; mime: string }): Promis
     body: (() => {
       const form = new FormData();
       const buf: Buffer = file.buffer as unknown as Buffer;
-const view = new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
-form.append("file", new Blob([view], { type: file.mime }), `upload-${Date.now()}`);
+const ab = new ArrayBuffer(buf.byteLength);
+new Uint8Array(ab).set(new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength));
+form.append("file", new Blob([ab], { type: file.mime }), `upload-${Date.now()}`);
 return form;
     })(),
   });
