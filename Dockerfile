@@ -2,7 +2,8 @@
 
 FROM node:lts AS build
 
-RUN corepack enable
+# Enable pnpm properly
+RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
 
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
@@ -18,20 +19,21 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-COPY pnpm-lock.yaml ./
+# Copy manifests first to leverage Docker layer cache
+COPY package.json pnpm-lock.yaml ./
 
-RUN --mount=type=cache,target=/pnpm/store \
-  pnpm fetch --frozen-lockfile
+# ⬇️ Install ALL deps (build butuh devDeps)
+# kalau tidak ada pnpm-lock.yaml, ganti dengan:
+# RUN pnpm install --no-frozen-lockfile
+RUN pnpm install --frozen-lockfile
 
-COPY package.json ./
-
-RUN --mount=type=cache,target=/pnpm/store \
-  pnpm install --frozen-lockfile --prod --offline
-
+# Copy sisa file
 COPY . .
 
-RUN pnpm build
+# Workspace-aware build (aman untuk project multi-folder)
+RUN pnpm -w run build
 
+# ---- runtime stage ----
 FROM node:lts AS runtime
 
 RUN groupadd -g 1001 appgroup && \
