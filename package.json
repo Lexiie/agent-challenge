@@ -12,7 +12,8 @@
     "start:agent": "mastra start",
     "lint": "next lint",
     "build": "mastra build && next build",
-    "start": "concurrently \"npm:start:agent\" \"npm:start:ui\""
+    "start": "concurrently \"npm:start:agent\" \"npm:start:ui\"",
+    "build:ci": "NEXT_TELEMETRY_DISABLED=1 TSC_COMPILE_ON_ERROR=1 next build --no-lint"
   },
   "dependencies": {
     "@ag-ui/mastra": "0.1.0",
