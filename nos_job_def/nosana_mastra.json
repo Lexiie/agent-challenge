@@ -1,0 +1,41 @@
+{
+  "global": {
+    "env": {
+      "INTERFAZE_API_BASE": "https://api.interfaze.ai/v1",
+      "INTERFAZE_API_KEY": "${INTERFAZE_API_KEY}",
+      "UI_PORT": "3000",
+      "AGENT_PORT": "4111"
+    }
+  },
+  "ops": [
+    {
+      "id": "labelsimplified",
+      "type": "container/run",
+      "args": {
+        "image": "docker.io/${DOCKERHUB_USERNAME}/agent-challenge:latest",
+        "expose": 3000,
+        "env": {
+          "INTERFAZE_API_BASE": "https://api.interfaze.ai/v1",
+          "INTERFAZE_API_KEY": "${INTERFAZE_API_KEY}",
+          "UI_PORT": "3000",
+          "AGENT_PORT": "4111",
+          "WEB_FETCH_ENABLED": "true"
+        },
+        "healthcheck": {
+          "path": "/healthz",
+          "interval": 30,
+          "timeout": 5,
+          "retries": 3
+        }
+      }
+    }
+  ],
+  "meta": {
+    "trigger": "dashboard",
+    "system_requirements": {
+      "required_vram": 0
+    }
+  },
+  "type": "container",
+  "version": "0.2"
+}

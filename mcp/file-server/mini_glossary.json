@@ -1,0 +1,194 @@
+[
+  {
+    "name": "water",
+    "synonyms": ["aqua", "eau"],
+    "description": "Base solvent in most formulations, hydrates and dissolves other ingredients.",
+    "common_uses": ["hydration", "solvent"]
+  },
+  {
+    "name": "glycerin",
+    "synonyms": ["glycerol"],
+    "description": "Humectant that attracts water to the skin or food product.",
+    "common_uses": ["humectant", "moisturizer"]
+  },
+  {
+    "name": "sodium chloride",
+    "synonyms": ["salt", "sea salt"],
+    "description": "Flavor enhancer and viscosity controller.",
+    "common_uses": ["seasoning", "thickener"]
+  },
+  {
+    "name": "citric acid",
+    "synonyms": ["2-hydroxypropane-1,2,3-tricarboxylic acid"],
+    "description": "Acidulant for pH control and preservative booster.",
+    "common_uses": ["pH adjuster", "flavoring"]
+  },
+  {
+    "name": "tocopherol",
+    "synonyms": ["vitamin e", "mixed tocopherols"],
+    "description": "Antioxidant that helps stabilize oils and offers skin conditioning.",
+    "common_uses": ["antioxidant", "skin conditioner"]
+  },
+  {
+    "name": "niacinamide",
+    "synonyms": ["vitamin b3", "nicotinamide"],
+    "description": "Supports skin barrier and brightening.",
+    "common_uses": ["skin brightener", "anti-inflammatory"]
+  },
+  {
+    "name": "panthenol",
+    "synonyms": ["provitamin b5"],
+    "description": "Humectant that soothes and moisturizes skin.",
+    "common_uses": ["moisturizer", "conditioner"]
+  },
+  {
+    "name": "hyaluronic acid",
+    "synonyms": ["sodium hyaluronate"],
+    "description": "Large molecule that holds water and plumps skin.",
+    "common_uses": ["hydration", "skin plumping"]
+  },
+  {
+    "name": "retinol",
+    "synonyms": ["vitamin a", "retinyl"],
+    "description": "Supports skin renewal and collagen production.",
+    "common_uses": ["anti-aging", "skin renewal"]
+  },
+  {
+    "name": "salicylic acid",
+    "synonyms": ["beta hydroxy acid", "BHA"],
+    "description": "Exfoliant that helps unclog pores.",
+    "common_uses": ["exfoliant", "acne treatment"]
+  },
+  {
+    "name": "lactic acid",
+    "synonyms": ["alpha hydroxy acid", "AHA"],
+    "description": "Mild chemical exfoliant and pH adjuster.",
+    "common_uses": ["exfoliant", "pH adjuster"]
+  },
+  {
+    "name": "sodium benzoate",
+    "synonyms": ["benzoate of soda"],
+    "description": "Preservative to prevent microbial growth.",
+    "common_uses": ["preservative"]
+  },
+  {
+    "name": "potassium sorbate",
+    "synonyms": ["sorbic acid salt"],
+    "description": "Food-grade preservative against yeast and mold.",
+    "common_uses": ["preservative"]
+  },
+  {
+    "name": "benzyl alcohol",
+    "synonyms": ["phenylcarbinol"],
+    "description": "Preservative and fragrance component.",
+    "common_uses": ["preservative", "fragrance"]
+  },
+  {
+    "name": "cocamidopropyl betaine",
+    "synonyms": ["CAPB"],
+    "description": "Mild surfactant derived from coconut oil.",
+    "common_uses": ["cleanser", "foam booster"]
+  },
+  {
+    "name": "sodium laureth sulfate",
+    "synonyms": ["SLES"],
+    "description": "Foaming surfactant found in cleansers and shampoos.",
+    "common_uses": ["surfactant", "cleanser"]
+  },
+  {
+    "name": "sodium lauryl sulfate",
+    "synonyms": ["SLS"],
+    "description": "Strong foaming surfactant.",
+    "common_uses": ["surfactant", "detergent"]
+  },
+  {
+    "name": "propylene glycol",
+    "synonyms": ["1,2-propanediol"],
+    "description": "Solvent and humectant used in foods and cosmetics.",
+    "common_uses": ["solvent", "humectant"]
+  },
+  {
+    "name": "xanthan gum",
+    "synonyms": ["corn sugar gum"],
+    "description": "Natural thickener and stabilizer.",
+    "common_uses": ["thickener", "stabilizer"]
+  },
+  {
+    "name": "guar gum",
+    "synonyms": ["guaran"],
+    "description": "Plant-based thickener and binder.",
+    "common_uses": ["thickener", "binder"]
+  },
+  {
+    "name": "shea butter",
+    "synonyms": ["butyrospermum parkii"],
+    "description": "Emollient fat that softens skin.",
+    "common_uses": ["emollient", "moisturizer"]
+  },
+  {
+    "name": "cocoa butter",
+    "synonyms": ["theobroma cacao seed butter"],
+    "description": "Solid plant fat providing structure and moisture.",
+    "common_uses": ["emollient", "texture agent"]
+  },
+  {
+    "name": "dimethicone",
+    "synonyms": ["polydimethylsiloxane"],
+    "description": "Silicone emollient that smooths and protects skin.",
+    "common_uses": ["skin protectant", "texture enhancer"]
+  },
+  {
+    "name": "cyclopentasiloxane",
+    "synonyms": ["D5"],
+    "description": "Volatile silicone that provides slip and quick dry.",
+    "common_uses": ["texture", "spreadability"]
+  },
+  {
+    "name": "methylparaben",
+    "synonyms": ["p-hydroxybenzoic acid methyl ester"],
+    "description": "Paraben preservative for cosmetics.",
+    "common_uses": ["preservative"]
+  },
+  {
+    "name": "ethylparaben",
+    "synonyms": ["parahydroxybenzoic acid ethyl ester"],
+    "description": "Paraben preservative used in topical products.",
+    "common_uses": ["preservative"]
+  },
+  {
+    "name": "titanium dioxide",
+    "synonyms": ["ci 77891"],
+    "description": "White pigment and UV filter.",
+    "common_uses": ["colorant", "uv filter"]
+  },
+  {
+    "name": "zinc oxide",
+    "synonyms": ["ci 77947"],
+    "description": "Mineral UV blocker and skin protectant.",
+    "common_uses": ["uv filter", "skin protectant"]
+  },
+  {
+    "name": "fragrance",
+    "synonyms": ["parfum"],
+    "description": "Blend of aromatic compounds for scent.",
+    "common_uses": ["fragrance"]
+  },
+  {
+    "name": "phenoxyethanol",
+    "synonyms": ["beta-phenoxyethanol"],
+    "description": "Preservative effective against bacteria.",
+    "common_uses": ["preservative"]
+  },
+  {
+    "name": "niacin",
+    "synonyms": ["nicotinic acid"],
+    "description": "Supports metabolic health; used in fortified foods.",
+    "common_uses": ["vitamin", "fortification"]
+  },
+  {
+    "name": "ascorbic acid",
+    "synonyms": ["vitamin c"],
+    "description": "Antioxidant and skin brightener.",
+    "common_uses": ["antioxidant", "brightening"]
+  }
+]

@@ -1,0 +1,108 @@
+[
+  {
+    "pattern": "paraben",
+    "risk_level": "Yellow",
+    "applies_to": ["methylparaben", "ethylparaben", "propylparaben"],
+    "reason": "Parabens may cause sensitivity in some individuals; consider cumulative exposure."
+  },
+  {
+    "pattern": "sodium lauryl sulfate",
+    "risk_level": "Yellow",
+    "reason": "SLS can be irritating to skin and eyes at higher concentrations."
+  },
+  {
+    "pattern": "sodium laureth sulfate",
+    "risk_level": "Yellow",
+    "reason": "SLES is milder than SLS but may still irritate sensitive skin."
+  },
+  {
+    "pattern": "fragrance",
+    "risk_level": "Yellow",
+    "reason": "Fragrance blends can trigger allergies; composition is often undisclosed."
+  },
+  {
+    "pattern": "benzyl alcohol",
+    "risk_level": "Yellow",
+    "reason": "May cause dryness or irritation in sensitive users."
+  },
+  {
+    "pattern": "retinol",
+    "risk_level": "Yellow",
+    "reason": "Retinoids increase photosensitivity; avoid mixing with strong exfoliants."
+  },
+  {
+    "pattern": "salicylic acid",
+    "risk_level": "Yellow",
+    "reason": "Beta hydroxy acids can over-exfoliate; patch test suggested."
+  },
+  {
+    "pattern": "lactic acid",
+    "risk_level": "Yellow",
+    "reason": "AHAs may cause tingling; wear sunscreen after use."
+  },
+  {
+    "pattern": "ascorbic acid",
+    "risk_level": "Yellow",
+    "reason": "Vitamin C serums can destabilize when exposed to air or light."
+  },
+  {
+    "pattern": "alpha hydroxy",
+    "risk_level": "Yellow",
+    "reason": "General caution for AHAs regarding sun sensitivity."
+  },
+  {
+    "pattern": "hydroquinone",
+    "risk_level": "Red",
+    "reason": "Use is restricted in many regions; consult a professional."
+  },
+  {
+    "pattern": "formaldehyde",
+    "risk_level": "Red",
+    "reason": "Known irritant; avoid repeated exposure."
+  },
+  {
+    "pattern": "nitrite",
+    "risk_level": "Yellow",
+    "reason": "Nitrites can form nitrosamines when combined with amines."
+  },
+  {
+    "pattern": "titanium dioxide",
+    "risk_level": "Yellow",
+    "reason": "Inhalation of loose powders may pose risk; pressed formats safer."
+  },
+  {
+    "pattern": "petrolatum",
+    "risk_level": "Green",
+    "reason": "Highly refined petrolatum is considered safe when used as directed."
+  },
+  {
+    "pattern": "alcohol denat",
+    "risk_level": "Yellow",
+    "reason": "Denatured alcohol can cause dryness with frequent use."
+  },
+  {
+    "pattern": "essential oil",
+    "risk_level": "Yellow",
+    "reason": "Essential oils may cause irritation or sensitization."
+  },
+  {
+    "pattern": "chemical sunscreen",
+    "risk_level": "Yellow",
+    "reason": "Some filters can cause irritation; reapply as directed."
+  },
+  {
+    "pattern": "mineral oil",
+    "risk_level": "Green",
+    "reason": "Cosmetic-grade mineral oil is inert and generally safe."
+  },
+  {
+    "pattern": "sulfite",
+    "risk_level": "Yellow",
+    "reason": "Sulfites may trigger reactions in sensitive individuals."
+  },
+  {
+    "pattern": "preservative",
+    "risk_level": "Green",
+    "reason": "General note: proper preservatives protect against contamination."
+  }
+]

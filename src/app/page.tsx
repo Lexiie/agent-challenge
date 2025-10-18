@@ -1,256 +1,214 @@
 "use client";
 
-import { useCoAgent, useCopilotAction } from "@copilotkit/react-core";
-import { CopilotKitCSSProperties, CopilotSidebar } from "@copilotkit/react-ui";
-import { useState } from "react";
-import { AgentState as AgentStateSchema } from "@/mastra/agents";
-import { z } from "zod";
-import { WeatherToolResult } from "@/mastra/tools";
+import { useCallback, useMemo, useState } from "react";
+import UploadCard from "@ui/components/UploadCard";
+import ProgressSteps from "@ui/components/ProgressSteps";
+import ResultTable from "@ui/components/ResultTable";
+import type { ExplanationItem } from "@/agent/explain";
+import type { OCRResult } from "@/agent/ocr";
 
-type AgentState = z.infer<typeof AgentStateSchema>;
+type StepStatus = "pending" | "active" | "complete";
 
-export default function CopilotKitPage() {
-  const [themeColor, setThemeColor] = useState("#6366f1");
+type StepKey = "ocr" | "analysis" | "explanation";
 
-  // 🪁 Frontend Actions: https://docs.copilotkit.ai/guides/frontend-actions
-  useCopilotAction({
-    name: "setThemeColor",
-    parameters: [{
-      name: "themeColor",
-      description: "The theme color to set. Make sure to pick nice colors.",
-      required: true,
-    }],
-    handler({ themeColor }) {
-      setThemeColor(themeColor);
+type Step = {
+  key: StepKey;
+  label: string;
+  status: StepStatus;
+  description: string;
+};
+
+const INITIAL_STEPS: Step[] = [
+  {
+    key: "ocr",
+    label: "OCR",
+    status: "pending",
+    description: "Waiting to read the label image.",
+  },
+  {
+    key: "analysis",
+    label: "Analysis",
+    status: "pending",
+    description: "Preparing ingredient heuristics and lookups.",
+  },
+  {
+    key: "explanation",
+    label: "Explanation",
+    status: "pending",
+    description: "Generating consumer-friendly insights.",
+  },
+];
+
+const STEP_DESCRIPTIONS: Record<StepKey, { active: string; complete: string }> = {
+  ocr: {
+    active: "Uploading and reading the label with Interfaze VOCR…",
+    complete: "OCR agent extracted text from the label.",
+  },
+  analysis: {
+    active: "Matching glossary terms and risk rules…",
+    complete: "Heuristics prepared for explanation agent.",
+  },
+  explanation: {
+    active: "Summarizing ingredient impact for consumers…",
+    complete: "Explanation ready with safety badges.",
+  },
+};
+
+export default function LabelSimplifiedPage() {
+  const [steps, setSteps] = useState<Step[]>(INITIAL_STEPS);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [summary, setSummary] = useState<string>();
+  const [disclaimer, setDisclaimer] = useState<string>();
+  const [items, setItems] = useState<ExplanationItem[]>([]);
+  const [ocrResult, setOcrResult] = useState<OCRResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [lastInput, setLastInput] = useState<string>("");
+
+  const updateStep = useCallback((key: StepKey, status: StepStatus, description?: string) => {
+    setSteps((prev) =>
+      prev.map((step) =>
+        step.key === key
+          ? {
+              ...step,
+              status,
+              description: description ?? step.description,
+            }
+          : step
+      )
+    );
+  }, []);
+
+  const resetSteps = useCallback(() => {
+    setSteps(INITIAL_STEPS);
+  }, []);
+
+  const latestRiskBadge = useMemo(() => {
+    if (!items || items.length === 0) {
+      return null;
+    }
+    const priority: Record<ExplanationItem["risk_level"], number> = {
+      Red: 3,
+      Yellow: 2,
+      Green: 1,
+      Unknown: 0,
+    };
+    return items.reduce<ExplanationItem | null>((current, item) => {
+      if (!current) {
+        return item;
+      }
+      return priority[item.risk_level] > priority[current.risk_level] ? item : current;
+    }, null);
+  }, [items]);
+
+  const handleSubmit = useCallback(
+    async ({ file, imageUrl }: { file?: File; imageUrl?: string }) => {
+      if (!file && !imageUrl) {
+        return;
+      }
+
+      setIsSubmitting(true);
+      setError(null);
+      resetSteps();
+      setItems([]);
+      setSummary(undefined);
+      setDisclaimer(undefined);
+      setOcrResult(null);
+      setLastInput(imageUrl || file?.name || "");
+
+      try {
+        updateStep("ocr", "active", STEP_DESCRIPTIONS.ocr.active);
+
+        let response: Response;
+        if (file) {
+          const formData = new FormData();
+          formData.append("file", file);
+          response = await fetch("/api/analyze", {
+            method: "POST",
+            body: formData,
+          });
+        } else {
+          response = await fetch("/api/analyze", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ image_url: imageUrl }),
+          });
+        }
+
+        if (!response.ok) {
+          const problem = await response.json().catch(() => ({}));
+          throw new Error(problem?.error || `Server returned ${response.status}`);
+        }
+
+        const data = (await response.json()) as {
+          ocr: OCRResult;
+          explanation: {
+            summary: string;
+            items: ExplanationItem[];
+            disclaimer: string;
+          };
+        };
+
+        setOcrResult(data.ocr);
+        updateStep("ocr", "complete", STEP_DESCRIPTIONS.ocr.complete);
+
+        updateStep("analysis", "active", STEP_DESCRIPTIONS.analysis.active);
+        updateStep("analysis", "complete", STEP_DESCRIPTIONS.analysis.complete);
+
+        updateStep("explanation", "active", STEP_DESCRIPTIONS.explanation.active);
+        setItems(data.explanation?.items || []);
+        setSummary(data.explanation?.summary);
+        setDisclaimer(data.explanation?.disclaimer);
+        updateStep("explanation", "complete", STEP_DESCRIPTIONS.explanation.complete);
+      } catch (caught) {
+        console.error("LabelSimplifiedPage", caught);
+        setError((caught as Error).message || "Unexpected error occurred");
+        resetSteps();
+      } finally {
+        setIsSubmitting(false);
+      }
     },
-  });
+    [resetSteps, updateStep]
+  );
 
   return (
-    <main style={{ "--copilot-kit-primary-color": themeColor } as CopilotKitCSSProperties}>
-      <YourMainContent themeColor={themeColor} />
-      <CopilotSidebar
-        clickOutsideToClose={false}
-        defaultOpen={true}
-        labels={{
-          title: "Popup Assistant",
-          initial: "👋 Hi, there! You're chatting with an agent. This agent comes with a few tools to get you started.\n\nFor example you can try:\n- **Frontend Tools**: \"Set the theme to orange\"\n- **Shared State**: \"Write a proverb about AI\"\n- **Generative UI**: \"Get the weather in SF\"\n\nAs you interact with the agent, you'll see the UI update in real-time to reflect the agent's **state**, **tool calls**, and **progress**."
-        }}
-      />
+    <main className="min-h-screen bg-slate-950 text-slate-100">
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-12">
+        <header className="space-y-4 text-slate-200">
+          <p className="text-xs uppercase tracking-[0.4em] text-sky-400">LabelSimplified</p>
+          <h1 className="text-3xl font-semibold sm:text-4xl">Decode product labels in a single pass</h1>
+          <p className="max-w-2xl text-sm text-slate-400">
+            Upload a snapshot of any food, cosmetic, or OTC label. Agent A extracts the raw ingredients,
+            Agent B checks glossary hints and risk heuristics, then returns clear explanations with safety badges.
+          </p>
+          {lastInput && (
+            <p className="text-xs text-slate-500">
+              Last input: <span className="font-mono text-slate-300">{lastInput}</span>
+            </p>
+          )}
+          {latestRiskBadge && (
+            <p className="text-xs text-slate-400">
+              Highest flagged ingredient: <span className="font-semibold text-amber-300">{latestRiskBadge.name}</span>
+            </p>
+          )}
+          {ocrResult && (
+            <p className="text-xs text-slate-500">
+              OCR confidence: <span className="font-semibold text-slate-300">{Math.round(ocrResult.confidence * 100)}%</span>
+            </p>
+          )}
+        </header>
+
+        <UploadCard onSubmit={handleSubmit} isSubmitting={isSubmitting} />
+
+        {error ? (
+          <div className="rounded-lg border border-rose-600/60 bg-rose-500/20 px-4 py-3 text-sm text-rose-200">
+            {error}
+          </div>
+        ) : (
+          <ProgressSteps steps={steps} />
+        )}
+
+        <ResultTable summary={summary} disclaimer={disclaimer} items={items} />
+      </div>
     </main>
-  );
-}
-
-function YourMainContent({ themeColor }: { themeColor: string }) {
-  // 🪁 Shared State: https://docs.copilotkit.ai/coagents/shared-state
-  const { state, setState } = useCoAgent<AgentState>({
-    name: "weatherAgent",
-    initialState: {
-      proverbs: [
-        "CopilotKit may be new, but its the best thing since sliced bread.",
-      ],
-    },
-  })
-
-  //🪁 Generative UI: https://docs.copilotkit.ai/coagents/generative-ui
-  useCopilotAction({
-    name: "weatherTool",
-    description: "Get the weather for a given location.",
-    available: "frontend",
-    parameters: [
-      { name: "location", type: "string", required: true },
-    ],
-    render: ({ args, result, status }) => {
-      return <WeatherCard
-        location={args.location}
-        themeColor={themeColor}
-        result={result}
-        status={status}
-      />
-    },
-  });
-
-  useCopilotAction({
-    name: "updateWorkingMemory",
-    available: "frontend",
-    render: ({ args }) => {
-      return <div style={{ backgroundColor: themeColor }} className="rounded-2xl max-w-md w-full text-white p-4">
-        <p>✨ Memory updated</p>
-        <details className="mt-2">
-          <summary className="cursor-pointer text-white">See updates</summary>
-          <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }} className="overflow-x-auto text-sm bg-white/20 p-4 rounded-lg mt-2">
-            {JSON.stringify(args, null, 2)}
-          </pre>
-        </details>
-      </div>
-    },
-  });
-
-  return (
-    <div
-      style={{ backgroundColor: themeColor }}
-      className="h-screen w-screen flex justify-center items-center flex-col transition-colors duration-300"
-    >
-      <div className="bg-white/20 backdrop-blur-md p-8 rounded-2xl shadow-xl max-w-2xl w-full">
-        <h1 className="text-4xl font-bold text-white mb-2 text-center">Proverbs</h1>
-        <p className="text-gray-200 text-center italic mb-6">This is a demonstrative page, but it could be anything you want! 🪁</p>
-        <hr className="border-white/20 my-6" />
-        <div className="flex flex-col gap-3">
-          {state.proverbs?.map((proverb, index) => (
-            <div
-              key={index}
-              className="bg-white/15 p-4 rounded-xl text-white relative group hover:bg-white/20 transition-all"
-            >
-              <p className="pr-8">{proverb}</p>
-              <button
-                onClick={() => setState({
-                  ...state,
-                  proverbs: state.proverbs?.filter((_, i) => i !== index),
-                })}
-                className="absolute right-3 top-3 opacity-0 group-hover:opacity-100 transition-opacity 
-                  bg-red-500 hover:bg-red-600 text-white rounded-full h-6 w-6 flex items-center justify-center"
-              >
-                ✕
-              </button>
-            </div>
-          ))}
-        </div>
-        {state.proverbs?.length === 0 && <p className="text-center text-white/80 italic my-8">
-          No proverbs yet. Ask the assistant to add some!
-        </p>}
-      </div>
-    </div>
-  );
-}
-
-// Weather card component where the location and themeColor are based on what the agent
-// sets via tool calls.
-function WeatherCard({
-  location,
-  themeColor,
-  result,
-  status
-}: {
-  location?: string,
-  themeColor: string,
-  result: WeatherToolResult,
-  status: "inProgress" | "executing" | "complete"
-}) {
-  if (status !== "complete") {
-    return (
-      <div
-        className="rounded-xl shadow-xl mt-6 mb-4 max-w-md w-full"
-        style={{ backgroundColor: themeColor }}
-      >
-        <div className="bg-white/20 p-4 w-full">
-          <p className="text-white animate-pulse">Loading weather for {location}...</p>
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div
-      style={{ backgroundColor: themeColor }}
-      className="rounded-xl shadow-xl mt-6 mb-4 max-w-md w-full"
-    >
-      <div className="bg-white/20 p-4 w-full">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-xl font-bold text-white capitalize">{location}</h3>
-            <p className="text-white">Current Weather</p>
-          </div>
-          <WeatherIcon conditions={result?.conditions} />
-        </div>
-
-        <div className="mt-4 flex items-end justify-between">
-          <div className="text-3xl font-bold text-white">
-            <span className="">
-              {result?.temperature}° C
-            </span>
-            <span className="text-sm text-white/50">
-              {" / "}
-              {((result?.temperature * 9) / 5 + 32).toFixed(1)}° F
-            </span>
-          </div>
-          <div className="text-sm text-white">{result?.conditions}</div>
-        </div>
-
-        <div className="mt-4 pt-4 border-t border-white">
-          <div className="grid grid-cols-3 gap-2 text-center">
-            <div>
-              <p className="text-white text-xs">Humidity</p>
-              <p className="text-white font-medium">{result?.humidity}%</p>
-            </div>
-            <div>
-              <p className="text-white text-xs">Wind</p>
-              <p className="text-white font-medium">{result?.windSpeed} mph</p>
-            </div>
-            <div>
-              <p className="text-white text-xs">Feels Like</p>
-              <p className="text-white font-medium">{result?.feelsLike}°</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function WeatherIcon({ conditions }: { conditions: string }) {
-  if (!conditions) return null;
-
-  if (
-    conditions.toLowerCase().includes("clear") ||
-    conditions.toLowerCase().includes("sunny")
-  ) {
-    return <SunIcon />;
-  }
-
-  if (
-    conditions.toLowerCase().includes("rain") ||
-    conditions.toLowerCase().includes("drizzle") ||
-    conditions.toLowerCase().includes("snow") ||
-    conditions.toLowerCase().includes("thunderstorm")
-  ) {
-    return <RainIcon />;
-  }
-
-  if (
-    conditions.toLowerCase().includes("fog") ||
-    conditions.toLowerCase().includes("cloud") ||
-    conditions.toLowerCase().includes("overcast")
-  ) {
-    return <CloudIcon />;
-  }
-
-  return <CloudIcon />;
-}
-
-// Simple sun icon for the weather card
-function SunIcon() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-14 h-14 text-yellow-200">
-      <circle cx="12" cy="12" r="5" />
-      <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" strokeWidth="2" stroke="currentColor" />
-    </svg>
-  );
-}
-
-function RainIcon() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-14 h-14 text-blue-200">
-      {/* Cloud */}
-      <path d="M7 15a4 4 0 0 1 0-8 5 5 0 0 1 10 0 4 4 0 0 1 0 8H7z" fill="currentColor" opacity="0.8" />
-      {/* Rain drops */}
-      <path d="M8 18l2 4M12 18l2 4M16 18l2 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" fill="none" />
-    </svg>
-  );
-}
-
-function CloudIcon() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-14 h-14 text-gray-200">
-      <path d="M7 15a4 4 0 0 1 0-8 5 5 0 0 1 10 0 4 4 0 0 1 0 8H7z" fill="currentColor" />
-    </svg>
   );
 }
