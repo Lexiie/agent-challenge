@@ -7,10 +7,11 @@
   "dev:ui": "next dev --turbo",
   "build:agent": "mastra build",
   "build:ui": "next build",
-  "start:agent": "PORT=4111 mastra start",
-  "start:ui": "PORT=8080 next start",
   "build": "mastra build && next build",
-  "start": "concurrently \"npm:start:agent\" \"npm:start:ui\""
+  "start:agent": "PORT=4111 mastra start",
+  "start:ui": "next start",
+  "start": "concurrently \"npm:start:agent\" \"npm:start:ui\"",
+  "lint": "next lint"
 }
   "dependencies": {
     "@ag-ui/mastra": "0.1.0",
