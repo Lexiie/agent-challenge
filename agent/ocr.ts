@@ -35,48 +35,32 @@ const DEFAULT_RESULT: OCRResult = {
 
 function extractMessageContent(payload: ChatCompletionResponse): string {
   const message = payload?.choices?.[0]?.message;
-  if (!message) {
-    return "";
-  }
+  if (!message) return "";
 
   const { content } = message;
-  if (typeof content === "string") {
-    return content;
-  }
+  if (typeof content === "string") return content;
 
   if (Array.isArray(content)) {
     for (const chunk of content) {
-      if (typeof chunk?.output_text === "string") {
-        return chunk.output_text;
-      }
-      if (typeof chunk?.text === "string") {
-        return chunk.text;
-      }
+      if (typeof chunk?.output_text === "string") return chunk.output_text;
+      if (typeof chunk?.text === "string") return chunk.text;
     }
   }
-
   return "";
 }
 
 function normalizeIngredients(raw: unknown): string[] {
-  if (!raw) {
-    return [];
-  }
-
+  if (!raw) return [];
   const items = Array.isArray(raw) ? raw : [raw];
   const collected: string[] = [];
 
   for (const entry of items) {
-    if (typeof entry !== "string") {
-      continue;
-    }
-
+    if (typeof entry !== "string") continue;
     const splits = entry
       .split(/[\n•]/)
-      .flatMap((segment) => segment.split(/[;,]/))
-      .map((segment) => segment.trim().toLowerCase())
-      .filter((segment) => segment.length > 0);
-
+      .flatMap((s) => s.split(/[;,]/))
+      .map((s) => s.trim().toLowerCase())
+      .filter((s) => s.length > 0);
     collected.push(...splits);
   }
 
@@ -84,47 +68,33 @@ function normalizeIngredients(raw: unknown): string[] {
 }
 
 function normalizeSections(raw: unknown): OCRResult["sections"] {
-  if (!raw || typeof raw !== "object") {
-    return {};
-  }
-
+  if (!raw || typeof raw !== "object") return {};
   const maybeSections = raw as Record<string, unknown>;
   const sections: OCRResult["sections"] = {};
 
-  if (typeof maybeSections.warnings === "string" && maybeSections.warnings.trim().length > 0) {
+  if (typeof maybeSections.warnings === "string" && maybeSections.warnings.trim())
     sections.warnings = maybeSections.warnings.trim();
-  }
 
   if (Array.isArray(maybeSections.claims)) {
     const claims = maybeSections.claims
-      .filter((claim): claim is string => typeof claim === "string" && claim.trim().length > 0)
-      .map((claim) => claim.trim());
-
-    if (claims.length > 0) {
-      sections.claims = claims;
-    }
+      .filter((c): c is string => typeof c === "string" && c.trim().length > 0)
+      .map((c) => c.trim());
+    if (claims.length > 0) sections.claims = claims;
   }
 
   return sections;
 }
 
 function normalizeDomain(domain: unknown): OCRResult["domain_guess"] {
-  if (domain === "food" || domain === "drug" || domain === "cosmetic" || domain === "mixed") {
-    return domain;
-  }
-  return "mixed";
+  return domain === "food" || domain === "drug" || domain === "cosmetic" || domain === "mixed"
+    ? domain
+    : "mixed";
 }
 
 function normalizeConfidence(value: unknown): number {
-  if (typeof value !== "number" || Number.isNaN(value)) {
-    return 0;
-  }
-  if (value < 0) {
-    return 0;
-  }
-  if (value > 1) {
-    return 1;
-  }
+  if (typeof value !== "number" || Number.isNaN(value)) return 0;
+  if (value < 0) return 0;
+  if (value > 1) return 1;
   return Number.parseFloat(value.toFixed(3));
 }
 
@@ -141,9 +111,34 @@ export async function analyzeLabel(image_url: string): Promise<OCRResult> {
     return { ...DEFAULT_RESULT };
   }
 
-  const requestBody = {
-    model: process.env.INTERFAZE_OCR_MODEL || "interfaze-vocr-latest",
+  const model = process.env.INTERFAZE_OCR_MODEL || "interfaze-beta";
+
+  const baseBody = {
+    model,
     temperature: 0.1,
+    messages: [
+      {
+        role: "system" as const,
+        content: SYSTEM_PROMPT,
+      },
+      {
+        role: "user" as const,
+        content: [
+          {
+            type: "text" as const,
+            text: "Analyze this product label image. Extract only the visible ingredients, warnings, and marketing claims. Return the JSON schema exactly.",
+          },
+          {
+            type: "image_url" as const,
+            image_url: { url: image_url },
+          },
+        ],
+      },
+    ],
+  };
+
+  const schemaBody = {
+    ...baseBody,
     response_format: {
       type: "json_schema",
       json_schema: {
@@ -184,41 +179,38 @@ export async function analyzeLabel(image_url: string): Promise<OCRResult> {
         },
       },
     },
-    messages: [
-      {
-        role: "system" as const,
-        content: SYSTEM_PROMPT,
-      },
-      {
-        role: "user" as const,
-        content: [
-          {
-            type: "input_text" as const,
-            text: "Analyze this product label image. Extract only the visible ingredients, warnings, and marketing claims. Return the JSON schema exactly.",
-          },
-          {
-            type: "input_image" as const,
-            image_url,
-          },
-        ],
-      },
-    ],
   };
 
   const startedAt = Date.now();
 
-  const response = await fetch(`${apiBase}/chat/completions`, {
+  // try with json_schema, fallback to json_object if unsupported
+  let response = await fetch(`${apiBase}/chat/completions`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${apiKey}`,
     },
-    body: JSON.stringify(requestBody),
+    body: JSON.stringify(schemaBody),
   });
 
+  if (!response.ok && (response.status === 400 || response.status === 422)) {
+    const jsonObjectBody = {
+      ...baseBody,
+      response_format: { type: "json_object" as const },
+    };
+    response = await fetch(`${apiBase}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(jsonObjectBody),
+    });
+  }
+
   if (!response.ok) {
-    const errorText = await response.text().catch(() => "");
-    throw new Error(`analyzeLabel: Interfaze API error ${response.status}: ${errorText}`);
+    const errText = await response.text().catch(() => "");
+    throw new Error(`analyzeLabel: Interfaze API error ${response.status}: ${errText}`);
   }
 
   const payload = (await response.json()) as ChatCompletionResponse;
@@ -232,23 +224,21 @@ export async function analyzeLabel(image_url: string): Promise<OCRResult> {
   }
 
   const content = extractMessageContent(payload);
-  if (!content) {
-    return { ...DEFAULT_RESULT };
-  }
+  if (!content) return { ...DEFAULT_RESULT };
 
-  let rawResult: Record<string, unknown> | undefined;
+  let raw: Record<string, unknown> | undefined;
   try {
-    rawResult = JSON.parse(content);
-  } catch (error) {
-    console.warn("analyzeLabel: failed to parse JSON response", error);
+    raw = JSON.parse(content);
+  } catch (err) {
+    console.warn("analyzeLabel: failed to parse JSON response", err);
     return { ...DEFAULT_RESULT };
   }
 
   const result: OCRResult = {
-    domain_guess: normalizeDomain(rawResult?.domain_guess),
-    ingredients: normalizeIngredients(rawResult?.ingredients),
-    sections: normalizeSections(rawResult?.sections),
-    confidence: normalizeConfidence(rawResult?.confidence),
+    domain_guess: normalizeDomain(raw?.domain_guess),
+    ingredients: normalizeIngredients(raw?.ingredients),
+    sections: normalizeSections(raw?.sections),
+    confidence: normalizeConfidence(raw?.confidence),
   };
 
   if (result.ingredients.length === 0) {
