@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { openai } from "@ai-sdk/openai";
+// import { openai } from "@ai-sdk/openai";
 import { createOllama } from "ollama-ai-provider-v2";
 import { Agent } from "@mastra/core/agent";
 import { weatherTool } from "@/mastra/tools";
