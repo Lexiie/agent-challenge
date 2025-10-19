@@ -3,18 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev:agent": "mastra dev",
-    "dev:ui": "next dev --turbopack",
-    "dev:debug": "LOG_LEVEL=debug npm run dev",
-    "build:ui": "next build",
-    "start:ui": "next start",
-    "build:agent": "mastra build",
-    "start:agent": "PORT=${PORT:-4111} mastra start",
-    "lint": "next lint",
-    "build": "mastra build && next build",
-    "start": "concurrently \"npm:start:agent\" \"npm:start:ui\"",
-    "build:ci": "NEXT_TELEMETRY_DISABLED=1 TSC_COMPILE_ON_ERROR=1 next build --no-lint"
-  },
+  "dev:agent": "mastra dev",
+  "dev:ui": "next dev --turbo",
+  "build:agent": "mastra build",
+  "build:ui": "next build",
+  "start:agent": "AGENT_PORT=${AGENT_PORT:-4111} mastra start",
+  "start:ui": "PORT=${PORT:-8080} next start",
+  "build": "mastra build && next build",
+  "start": "concurrently \"npm:start:agent\" \"npm:start:ui\""
+}
   "dependencies": {
     "@ag-ui/mastra": "0.1.0",
     "@ai-sdk/openai": "^2.0.42",
