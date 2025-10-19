@@ -214,8 +214,23 @@ export async function explainIngredients(data: OCRResult): Promise<ExplanationRe
     external_records: externalRecords,
   };
 
-  const requestBody = {
-    model: process.env.INTERFAZE_EXPLAIN_MODEL || "interfaze-llm-latest",
+
+  const explainModel = (process.env.INTERFAZE_EXPLAIN_MODEL || process.env.INTERFAZE_OCR_MODEL || "").trim();
+  const modelsToTry = Array.from(
+    new Set(
+      [explainModel, "interfaze-beta"].filter(
+        (value): value is string => Boolean(value && value.length > 0),
+      ),
+    ),
+  );
+
+  const contextMessage = [
+    "Use the provided context to explain each ingredient for a layperson. Cite sources from OFF/OBF or kb: entries.",
+    `Context JSON:\n${JSON.stringify(context, null, 2)}`,
+  ].join("\n\n");
+
+  const buildRequestBody = (model: string) => ({
+    model,
     temperature: 0.2,
     response_format: {
       type: "json_schema",
@@ -261,34 +276,220 @@ export async function explainIngredients(data: OCRResult): Promise<ExplanationRe
         role: "user" as const,
         content: [
           {
-            type: "input_text" as const,
-            text: "Use the provided context to explain each ingredient for a layperson. Cite sources from OFF/OBF or kb: entries.",
-          },
-          {
-            type: "input_text" as const,
-            text: JSON.stringify(context),
+            type: "text" as const,
+            text: contextMessage,
           },
         ],
       },
     ],
-  };
-
-  const startedAt = Date.now();
-
-  const response = await fetch(`${apiBase}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify(requestBody),
   });
 
-  if (!response.ok) {
-    const errorText = await response.text().catch(() => "");
-    throw new Error(`explainIngredients: Interfaze API error ${response.status}: ${errorText}`);
+  const startedAt = Date.now();
+  let response: Response | null = null;
+  let lastErrorText = "";
+  let lastStatus = 0;
+
+  for (const candidate of modelsToTry) {
+    const attempt = await fetch(`${apiBase}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(buildRequestBody(candidate)),
+    });
+
+    if (attempt.ok) {
+      response = attempt;
+      break;
+    }
+
+    lastStatus = attempt.status;
+    lastErrorText = await attempt.text().catch(() => "");
+    console.warn(`explainIngredients: model ${candidate} failed with ${attempt.status}: ${lastErrorText}`);
+
+    if ((attempt.status === 400 || attempt.status === 422) && candidate !== "interfaze-beta") {
+      console.warn("explainIngredients: retrying with interfaze-beta model");
+      continue;
+    }
+
+    response = attempt;
+    break;
   }
 
+  if (!response || !response.ok) {
+    const status = response?.status ?? lastStatus;
+    throw new Error(`explainIngredients: Interfaze API error ${status}: ${lastErrorText}`);
+  }
+  const payload = (await response.json()) as Record<string, unknown> & {
+    choices?: Array<{
+      message?: {
+        content?: string | Array<{ type?: string; text?: string; output_text?: string }>;
+      };
+    }>;
+    usage?: {
+      prompt_tokens?: number;
+      completion_tokens?: number;
+      total_tokens?: number;
+    };
+  };
+
+  const elapsed = Date.now() - startedAt;
+  if (process.env.NODE_ENV !== "production") {
+    const usage = payload.usage || {};
+    console.debug(
+      `explainIngredients: usage prompt=${usage.prompt_tokens ?? "n/a"} completion=${usage.completion_tokens ?? "n/a"} total=${usage.total_tokens ?? "n/a"} elapsed=${elapsed}ms`,
+    );
+  }
+
+  const message = payload?.choices?.[0]?.message;
+  let content = "";
+
+  if (message) {
+    if (typeof message.content === "string") {
+      content = message.content;
+    } else if (Array.isArray(message.content)) {
+      for (const chunk of message.content) {
+        if (typeof chunk?.output_text === "string") {
+          content = chunk.output_text;
+          break;
+        }
+        if (typeof chunk?.text === "string") {
+          content = chunk.text;
+          break;
+        }
+      }
+    }
+  }
+
+  if (!content) {
+    return { ...DEFAULT_RESULT };
+  }
+
+  let rawResult: Record<string, unknown>;
+  try {
+    rawResult = JSON.parse(content) as Record<string, unknown>;
+  } catch (error) {
+    console.warn("explainIngredients: failed to parse JSON response", error);
+    return { ...DEFAULT_RESULT };
+  }
+
+  const summary = typeof rawResult.summary === "string" ? rawResult.summary : DEFAULT_RESULT.summary;
+  const disclaimer = typeof rawResult.disclaimer === "string" ? rawResult.disclaimer : DEFAULT_RESULT.disclaimer;
+  const items = normalizeItems(rawResult.items);
+
+  return {
+    summary,
+    items,
+    disclaimer,
+  };
+}
+  const explainModel = (process.env.INTERFAZE_EXPLAIN_MODEL || process.env.INTERFAZE_OCR_MODEL || "").trim();
+  const modelsToTry = Array.from(
+    new Set(
+      [explainModel, "interfaze-beta"].filter(
+        (value): value is string => Boolean(value && value.length > 0),
+      ),
+    ),
+  );
+
+  const contextMessage = [
+    "Use the provided context to explain each ingredient for a layperson. Cite sources from OFF/OBF or kb: entries.",
+    `Context JSON: ${JSON.stringify(context)}`,
+  ].join("\n\n");
+
+  const buildRequestBody = (model: string) => ({
+    model,
+    temperature: 0.2,
+    response_format: {
+      type: "json_schema",
+      json_schema: {
+        name: "explanation_result",
+        schema: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            summary: { type: "string" },
+            items: {
+              type: "array",
+              items: {
+                type: "object",
+                additionalProperties: false,
+                properties: {
+                  name: { type: "string" },
+                  function: { type: "string" },
+                  risk_level: { type: "string", enum: ["Green", "Yellow", "Red", "Unknown"] },
+                  why: { type: "string" },
+                  certainty: { type: "number", minimum: 0, maximum: 1 },
+                  sources: {
+                    type: "array",
+                    items: { type: "string" },
+                    minItems: 1,
+                  },
+                },
+                required: ["name", "function", "risk_level", "why", "certainty", "sources"],
+              },
+            },
+            disclaimer: { type: "string" },
+          },
+          required: ["summary", "items", "disclaimer"],
+        },
+      },
+    },
+    messages: [
+      {
+        role: "system" as const,
+        content: SYSTEM_PROMPT,
+      },
+      {
+        role: "user" as const,
+        content: [
+          {
+            type: "text" as const,
+            text: contextMessage,
+          },
+        ],
+      },
+    ],
+  });
+
+  const startedAt = Date.now();
+  let response: Response | null = null;
+  let lastErrorText = "";
+  let lastStatus = 0;
+
+  for (const candidate of modelsToTry) {
+    const attempt = await fetch(`${apiBase}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(buildRequestBody(candidate)),
+    });
+
+    if (attempt.ok) {
+      response = attempt;
+      break;
+    }
+
+    lastStatus = attempt.status;
+    lastErrorText = await attempt.text().catch(() => "");
+    console.warn(`explainIngredients: model ${candidate} failed with ${attempt.status}: ${lastErrorText}`);
+
+    if ((attempt.status === 400 || attempt.status === 422) && candidate !== "interfaze-beta") {
+      console.warn("explainIngredients: retrying with interfaze-beta model");
+      continue;
+    }
+
+    response = attempt;
+    break;
+  }
+
+  if (!response || !response.ok) {
+    const status = response?.status ?? lastStatus;
+    throw new Error(`explainIngredients: Interfaze API error ${status}: ${lastErrorText}`);
+  }
   const payload = (await response.json()) as Record<string, unknown> & {
     choices?: Array<{
       message?: {
