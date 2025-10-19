@@ -12,7 +12,7 @@
   "start:ui": "next start",
   "start": "concurrently \"npm:start:agent\" \"npm:start:ui\"",
   "lint": "next lint"
-}
+},
   "dependencies": {
     "@ag-ui/mastra": "0.1.0",
     "@ai-sdk/openai": "^2.0.42",
