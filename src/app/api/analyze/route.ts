@@ -4,6 +4,12 @@ import { explainIngredients } from "@/agent/explain";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 const ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+const MIME_EXTENSION: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/gif": "gif",
+};
 
 async function readFileFromRequest(request: NextRequest): Promise<{ buffer: Buffer; mime: string } | null> {
   const contentType = request.headers.get("content-type") || "";
@@ -48,11 +54,14 @@ async function uploadToInterfaze(file: { buffer: Buffer; mime: string }): Promis
     },
     body: (() => {
       const form = new FormData();
+      form.append("purpose", "vision");
+
       const buf: Buffer = file.buffer as unknown as Buffer;
-const ab = new ArrayBuffer(buf.byteLength);
-new Uint8Array(ab).set(new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength));
-form.append("file", new Blob([ab], { type: file.mime }), `upload-${Date.now()}`);
-return form;
+      const extension = MIME_EXTENSION[file.mime] || "bin";
+      const filename = `upload-${Date.now()}.${extension}`;
+      const blob = new Blob([buf], { type: file.mime });
+      form.append("file", blob, filename);
+      return form;
     })(),
   });
 
