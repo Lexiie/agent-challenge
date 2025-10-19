@@ -16,7 +16,6 @@ pnpm-debug.log*
 .env.*
 
 # Build output
-.mastra/
 dist/
 build/
 

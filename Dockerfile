@@ -29,7 +29,7 @@ COPY . .
 RUN node -v && pnpm -v && pnpm -r ls --depth -1 || true
 
 # Run build for all workspaces that define a build script; skip packages without a build script
-RUN pnpm run build:ci
+RUN pnpm run build
 
 # -------- Runtime stage --------
 FROM node:lts AS runtime
