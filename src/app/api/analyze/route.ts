@@ -39,6 +39,10 @@ async function readFileFromRequest(request: NextRequest): Promise<{ buffer: Buff
   };
 }
 
+function bufferToDataUrl(file: { buffer: Buffer; mime: string }): string {
+  return `data:${file.mime};base64,${file.buffer.toString("base64")}`;
+}
+
 async function uploadToInterfaze(file: { buffer: Buffer; mime: string }): Promise<string> {
   const apiBase = (process.env.INTERFAZE_API_BASE || "https://api.interfaze.ai/v1").replace(/\/$/, "");
   const apiKey = process.env.INTERFAZE_API_KEY;
@@ -60,8 +64,9 @@ async function uploadToInterfaze(file: { buffer: Buffer; mime: string }): Promis
       const extension = MIME_EXTENSION[file.mime] || "bin";
       const filename = `upload-${Date.now()}.${extension}`;
       const arrayBuffer = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer;
-      const blob = new Blob([arrayBuffer], { type: file.mime });
-      form.append("file", blob, filename);
+      const filePart = new Uint8Array(arrayBuffer);
+      const fileBlob = new File([filePart], filename, { type: file.mime });
+      form.append("file", fileBlob);
       return form;
     })(),
   });
@@ -94,7 +99,12 @@ export async function POST(request: NextRequest) {
     } else {
       const file = await readFileFromRequest(request);
       if (file) {
-        imageUrl = await uploadToInterfaze(file);
+        try {
+          imageUrl = await uploadToInterfaze(file);
+        } catch (uploadError) {
+          console.warn("uploadToInterfaze failed, falling back to data URL", uploadError);
+          imageUrl = bufferToDataUrl(file);
+        }
       }
     }
 
