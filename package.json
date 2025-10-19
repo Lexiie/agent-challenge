@@ -9,7 +9,7 @@
     "build:ui": "next build",
     "start:ui": "next start",
     "build:agent": "mastra build",
-    "start:agent": "mastra start",
+    "start:agent": "mastra start --port ${PORT:-4111}",
     "lint": "next lint",
     "build": "mastra build && next build",
     "start": "concurrently \"npm:start:agent\" \"npm:start:ui\"",
