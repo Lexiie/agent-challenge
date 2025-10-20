@@ -1,6 +1,6 @@
 # Label Simplified
 
-[![Nosana – Deploy](https://img.shields.io/badge/Nosana-Deploy-10E80C?style=for-the-badge&labelColor=000000)](https://dashboard.nosana.com)&nbsp;![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=nextdotjs)&nbsp;![Mastra Agents](https://img.shields.io/badge/Mastra-agents-6c47ff?logo=sparkles&logoColor=fff)&nbsp;![MIT License](https://img.shields.io/badge/license-MIT-green)
+[![Nosana – Deploy](https://img.shields.io/badge/Nosana-Deploy-10E80C?logo=sparkles&logoColor=fff)](https://dashboard.nosana.com)&nbsp;![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=nextdotjs)&nbsp;![Mastra Agents](https://img.shields.io/badge/Mastra-agents-6c47ff?logo=sparkles&logoColor=fff)&nbsp;![MIT License](https://img.shields.io/badge/license-MIT-green)
 
 ## Overview
 Label Simplified is a web app that lets you drop in a product label photo and quickly get a plain-English readout of the ingredients, warnings, and safety notes. it's for anyone curious about what’s on the label.
