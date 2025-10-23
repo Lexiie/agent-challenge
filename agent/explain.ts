@@ -124,7 +124,7 @@ async function fetchExternalRecords(ingredients: string[], domain: OCRResult["do
     const url = `https://${baseDomain}/cgi/search.pl?search_terms=${encoded}&search_simple=1&json=1&page_size=1`;
 
     try {
-      const data = await fetch_json(url, { "User-Agent": "LabelSimplified-Agent" });
+      const data = await fetch_json(url, { "User-Agent": "Lablr-Agent" });
       records.push({ ingredient, source: baseDomain, data });
     } catch (error) {
       console.warn(`explainIngredients: external fetch failed for ${ingredient}`, error);

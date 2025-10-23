@@ -30,7 +30,7 @@ export default function ProgressSteps({ steps }: ProgressStepsProps) {
     <section className="rounded-xl border border-slate-800 bg-slate-900/60 p-6 shadow-md">
       <header className="mb-4 text-slate-200">
         <h2 className="text-xl font-semibold">Analysis progress</h2>
-        <p className="text-sm text-slate-400">LabelSimplified runs OCR, analysis, then explanation.</p>
+        <p className="text-sm text-slate-400">Lablr runs OCR, analysis, then explanation.</p>
       </header>
       <ol className="space-y-3">
         {steps.map((step, index) => (

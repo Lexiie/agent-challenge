@@ -167,7 +167,7 @@ export default function UploadCard({ onSubmit, isSubmitting = false }: UploadCar
             className="rounded-md bg-sky-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:bg-slate-700"
             disabled={isSubmitting || (!file && imageUrl.trim().length === 0)}
           >
-            {isSubmitting ? "Analyzing…" : "Run LabelSimplified"}
+            {isSubmitting ? "Analyzing…" : "Run Lablr"}
           </button>
         </div>
       </form>

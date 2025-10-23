@@ -54,7 +54,7 @@ const STEP_DESCRIPTIONS: Record<StepKey, { active: string; complete: string }> =
   },
 };
 
-export default function LabelSimplifiedPage() {
+export default function LablrPage() {
   const [steps, setSteps] = useState<Step[]>(INITIAL_STEPS);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [summary, setSummary] = useState<string>();
@@ -160,7 +160,7 @@ export default function LabelSimplifiedPage() {
         setDisclaimer(data.explanation?.disclaimer);
         updateStep("explanation", "complete", STEP_DESCRIPTIONS.explanation.complete);
       } catch (caught) {
-        console.error("LabelSimplifiedPage", caught);
+        console.error("LablrPage", caught);
         setError((caught as Error).message || "Unexpected error occurred");
         resetSteps();
       } finally {
@@ -174,7 +174,7 @@ export default function LabelSimplifiedPage() {
     <main className="min-h-screen bg-slate-950 text-slate-100">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-12">
         <header className="space-y-4 text-slate-200">
-          <p className="text-xs uppercase tracking-[0.4em] text-sky-400">LabelSimplified</p>
+          <p className="text-xs uppercase tracking-[0.4em] text-sky-400">Lablr</p>
           <h1 className="text-3xl font-semibold sm:text-4xl">Decode product labels in a single pass</h1>
           <p className="max-w-2xl text-sm text-slate-400">
             Upload a snapshot of any food, cosmetic, or OTC label. Agent A extracts the raw ingredients,

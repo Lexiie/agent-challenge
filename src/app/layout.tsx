@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Cabin_Condensed, Geist_Mono } from "next/font/google";
 import { CopilotKit } from "@copilotkit/react-core";
 import "./globals.css";
 import "@copilotkit/react-ui/styles.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const cabinCondensed = Cabin_Condensed({
+  variable: "--font-cabin-condensed",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
 const geistMono = Geist_Mono({
@@ -15,8 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Nosana Mastra Agent Kit",
-  description: "An example of using CopilotKit with Mastra agents.",
+  title: "Lablr",
+  description: "Drop label photos for quick ingredient insights.",
 };
 
 export default function RootLayout({
@@ -26,7 +27,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body className={`${cabinCondensed.variable} ${geistMono.variable} antialiased`}>
         <CopilotKit runtimeUrl="/api/copilotkit" agent="weatherAgent">
           {children}
         </CopilotKit>
