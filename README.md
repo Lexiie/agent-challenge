@@ -12,6 +12,10 @@ Lablr is a web app that lets you drop in a product label photo and quickly get a
 - File upload pipeline with automatic Interfaze hosting fallback to in-memory data URLs.
 - TypeScript-first codebase with strict linting and shared utilities under `@/tools` and `@ui/*` aliases.
 
+## Demo Video
+- https://youtu.be/pnJIVwg0mc8?si=yW3uEknqEa-Qx7vG
+- [![Watch the demo](https://img.youtube.com/vi/pnJIVwg0mc8/maxresdefault.jpg)](https://youtu.be/pnJIVwg0mc8?si=yW3uEknqEa-Qx7vG)
+
 ## Architecture
 - `agent/ocr.ts`: Talks to Interfaze's vision completion endpoint and normalizes the payload.
 - `agent/explain.ts`: Generates ingredient summaries using local data (`mcp/file-server`) and optional external fetches.
