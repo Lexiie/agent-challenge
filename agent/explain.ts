@@ -13,6 +13,7 @@ export type ExplanationItem = {
 };
 
 export type ExplanationResult = {
+  language: string;
   summary: string;
   items: ExplanationItem[];
   disclaimer: string;
@@ -39,20 +40,38 @@ type ExternalRecord = {
 };
 
 const SYSTEM_PROMPT = [
-  "Explain for lay users in English.",
+  "You are an ingredient explanation assistant for consumer labels.",
+  "Use the target language provided in the instructions (default to English) for all free-text fields.",
   "Use glossary and risk rules as hints.",
   "When in doubt, set risk_level=Unknown and explain uncertainty.",
   "No medical or regulatory advice.",
-  "Return ExplanationResult in strict JSON.",
+  "Return ExplanationResult in strict JSON and include the language field with the language code you used.",
 ].join(" ");
 
 const MCP_DIR = path.join(process.cwd(), "mcp", "file-server");
 
 const DEFAULT_RESULT: ExplanationResult = {
+  language: "en",
   summary: "Ingredient explanations unavailable while the language service is offline.",
   items: [],
   disclaimer: "This is not medical advice.",
 };
+
+function normalizeLanguage(value: unknown, fallback = "en"): string {
+  if (typeof value !== "string") {
+    return fallback;
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return fallback;
+  }
+  const lower = trimmed.toLowerCase();
+  return /^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/.test(lower) ? lower : fallback;
+}
+
+function buildFallbackResult(language?: string): ExplanationResult {
+  return { ...DEFAULT_RESULT, language: normalizeLanguage(language, DEFAULT_RESULT.language) };
+}
 
 async function readJsonFile<T>(fileName: string, fallback: T): Promise<T> {
   try {
@@ -188,7 +207,7 @@ export async function explainIngredients(data: OCRResult): Promise<ExplanationRe
   const apiKey = process.env.INTERFAZE_API_KEY;
   if (!apiKey) {
     console.warn("explainIngredients: INTERFAZE_API_KEY not set; returning fallback result");
-    return { ...DEFAULT_RESULT };
+    return buildFallbackResult(data.language);
   }
 
   const [glossary, rules] = await Promise.all([
@@ -201,8 +220,10 @@ export async function explainIngredients(data: OCRResult): Promise<ExplanationRe
   const externalRecords = await fetchExternalRecords(data.ingredients, data.domain_guess);
 
   const apiBase = (process.env.INTERFAZE_API_BASE || "https://api.interfaze.ai/v1").replace(/\/$/, "");
+  const targetLanguage = normalizeLanguage(data.language, DEFAULT_RESULT.language);
 
   const context = {
+    language: targetLanguage,
     product: {
       domain_guess: data.domain_guess,
       sections: data.sections,
@@ -225,6 +246,7 @@ export async function explainIngredients(data: OCRResult): Promise<ExplanationRe
   );
 
   const contextMessage = [
+    `Target language code: ${targetLanguage}. Write all free-text fields in this language while keeping risk_level enums in English.`,
     "Use the provided context to explain each ingredient for a layperson. Cite sources from OFF/OBF or kb: entries.",
     `Context JSON:\n${JSON.stringify(context, null, 2)}`,
   ].join("\n\n");
@@ -262,8 +284,13 @@ export async function explainIngredients(data: OCRResult): Promise<ExplanationRe
               },
             },
             disclaimer: { type: "string" },
+            language: {
+              type: "string",
+              description: "Language code used for the generated text (BCP-47).",
+              default: targetLanguage,
+            },
           },
-          required: ["summary", "items", "disclaimer"],
+          required: ["summary", "items", "disclaimer", "language"],
         },
       },
     },
@@ -360,7 +387,7 @@ export async function explainIngredients(data: OCRResult): Promise<ExplanationRe
   }
 
   if (!content) {
-    return { ...DEFAULT_RESULT };
+    return buildFallbackResult(targetLanguage);
   }
 
   let rawResult: Record<string, unknown>;
@@ -368,7 +395,7 @@ export async function explainIngredients(data: OCRResult): Promise<ExplanationRe
     rawResult = JSON.parse(content) as Record<string, unknown>;
   } catch (error) {
     console.warn("explainIngredients: failed to parse JSON response", error);
-    return { ...DEFAULT_RESULT };
+    return buildFallbackResult(targetLanguage);
   }
 
   const summary = typeof rawResult.summary === "string" ? rawResult.summary : DEFAULT_RESULT.summary;
@@ -376,10 +403,12 @@ export async function explainIngredients(data: OCRResult): Promise<ExplanationRe
     typeof rawResult.disclaimer === "string" ? rawResult.disclaimer : DEFAULT_RESULT.disclaimer;
   const items = normalizeItems(rawResult.items);
 
+  const language = normalizeLanguage((rawResult as Record<string, unknown>).language, targetLanguage);
+
   return {
+    language,
     summary,
     items,
     disclaimer,
   };
 }
-

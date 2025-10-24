@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import UploadCard from "@ui/components/UploadCard";
 import ProgressSteps from "@ui/components/ProgressSteps";
 import ResultTable from "@ui/components/ResultTable";
-import type { ExplanationItem } from "@/agent/explain";
+import type { ExplanationItem, ExplanationResult } from "@/agent/explain";
 import type { OCRResult } from "@/agent/ocr";
 
 type StepStatus = "pending" | "active" | "complete";
@@ -63,6 +63,7 @@ export default function LablrPage() {
   const [ocrResult, setOcrResult] = useState<OCRResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lastInput, setLastInput] = useState<string>("");
+  const [language, setLanguage] = useState<string>("");
 
   const updateStep = useCallback((key: StepKey, status: StepStatus, description?: string) => {
     setSteps((prev) =>
@@ -114,6 +115,7 @@ export default function LablrPage() {
       setDisclaimer(undefined);
       setOcrResult(null);
       setLastInput(imageUrl || file?.name || "");
+      setLanguage("");
 
       try {
         updateStep("ocr", "active", STEP_DESCRIPTIONS.ocr.active);
@@ -141,11 +143,7 @@ export default function LablrPage() {
 
         const data = (await response.json()) as {
           ocr: OCRResult;
-          explanation: {
-            summary: string;
-            items: ExplanationItem[];
-            disclaimer: string;
-          };
+          explanation: ExplanationResult;
         };
 
         setOcrResult(data.ocr);
@@ -158,6 +156,7 @@ export default function LablrPage() {
         setItems(data.explanation?.items || []);
         setSummary(data.explanation?.summary);
         setDisclaimer(data.explanation?.disclaimer);
+        setLanguage(data.explanation?.language || data.ocr.language || "");
         updateStep("explanation", "complete", STEP_DESCRIPTIONS.explanation.complete);
       } catch (caught) {
         console.error("LablrPage", caught);
@@ -188,6 +187,11 @@ export default function LablrPage() {
           {latestRiskBadge && (
             <p className="text-xs text-slate-400">
               Highest flagged ingredient: <span className="font-semibold text-amber-300">{latestRiskBadge.name}</span>
+            </p>
+          )}
+          {language && (
+            <p className="text-xs text-slate-500">
+              Detected language: <span className="font-semibold text-slate-300">{language}</span>
             </p>
           )}
           {ocrResult && (

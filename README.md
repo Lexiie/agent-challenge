@@ -7,6 +7,7 @@ Lablr is a web app that lets you drop in a product label photo and quickly get a
 
 ## Features
 - Vision OCR agent that extracts ingredients, warnings, and claims with schema-constrained outputs.
+- Automatic label language detection so OCR returns a BCP-47 language tag and downstream explanations localize accordingly.
 - Explanation agent that merges local heuristics, glossary lookups, and optional OpenFoodFacts/OpenBeautyFacts fetches.
 - Drag-and-drop web UI featuring progress tracking, risk badges, and structured results.
 - File upload pipeline with automatic Interfaze hosting fallback to in-memory data URLs.
@@ -17,8 +18,8 @@ Lablr is a web app that lets you drop in a product label photo and quickly get a
 - [![Watch the demo](https://img.youtube.com/vi/pnJIVwg0mc8/maxresdefault.jpg)](https://youtu.be/pnJIVwg0mc8?si=yW3uEknqEa-Qx7vG)
 
 ## Architecture
-- `agent/ocr.ts`: Talks to Interfaze's vision completion endpoint and normalizes the payload.
-- `agent/explain.ts`: Generates ingredient summaries using local data (`mcp/file-server`) and optional external fetches.
+- `agent/ocr.ts`: Talks to Interfaze's vision completion endpoint, normalizes the payload, and reports the detected label language.
+- `agent/explain.ts`: Generates ingredient summaries using local data (`mcp/file-server`) and optional external fetches, returning localized copy that matches the detected language.
 - `src/app`: Next.js App Router entry point, API route, and UI wiring.
 - `ui/components`: Reusable client components for upload, progress steps, and results tables.
 - `mcp`: Minimal content provider assets (glossary, risk rules) served to the explanation agent.

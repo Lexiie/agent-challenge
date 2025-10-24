@@ -3,6 +3,7 @@ export type OCRResult = {
   ingredients: string[];
   sections: { warnings?: string; claims?: string[] };
   confidence: number;
+  language: string;
 };
 
 type ChatCompletionResponse = {
@@ -23,7 +24,7 @@ const SYSTEM_PROMPT = [
   "Output OCRResult strictly in JSON.",
   "Do not invent ingredients.",
   "Low temperature.",
-  "English only."
+  "Detect the predominant label language and include it as a BCP-47 tag in the language field.",
 ].join(" ");
 
 const DEFAULT_RESULT: OCRResult = {
@@ -31,6 +32,7 @@ const DEFAULT_RESULT: OCRResult = {
   ingredients: [],
   sections: {},
   confidence: 0,
+  language: "en",
 };
 
 function extractMessageContent(payload: ChatCompletionResponse): string {
@@ -98,6 +100,14 @@ function normalizeConfidence(value: unknown): number {
   return Number.parseFloat(value.toFixed(3));
 }
 
+function normalizeLanguage(value: unknown): string {
+  if (typeof value !== "string") return "en";
+  const trimmed = value.trim();
+  if (!trimmed) return "en";
+  const lower = trimmed.toLowerCase();
+  return /^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/.test(lower) ? lower : "en";
+}
+
 export async function analyzeLabel(image_url: string): Promise<OCRResult> {
   if (!image_url || typeof image_url !== "string") {
     throw new Error("analyzeLabel: image_url is required");
@@ -126,7 +136,7 @@ export async function analyzeLabel(image_url: string): Promise<OCRResult> {
         content: [
           {
             type: "text" as const,
-            text: "Analyze this product label image. Extract only the visible ingredients, warnings, and marketing claims. Return the JSON schema exactly.",
+            text: "Analyze this product label image. Extract only the visible ingredients, warnings, and marketing claims. Detect the primary language and populate the language field. Return the JSON schema exactly.",
           },
           {
             type: "image_url" as const,
@@ -174,8 +184,13 @@ export async function analyzeLabel(image_url: string): Promise<OCRResult> {
               maximum: 1,
               default: 0,
             },
+            language: {
+              type: "string",
+              description: "Detected label language as a BCP-47 tag (e.g., en, es, fr, id).",
+              default: "en",
+            },
           },
-          required: ["domain_guess", "ingredients", "sections", "confidence"],
+          required: ["domain_guess", "ingredients", "sections", "confidence", "language"],
         },
       },
     },
@@ -239,6 +254,7 @@ export async function analyzeLabel(image_url: string): Promise<OCRResult> {
     ingredients: normalizeIngredients(raw?.ingredients),
     sections: normalizeSections(raw?.sections),
     confidence: normalizeConfidence(raw?.confidence),
+    language: normalizeLanguage(raw?.language),
   };
 
   if (result.ingredients.length === 0) {
